@@ -2,6 +2,6 @@
 builtin_interfaces/Duration time
 ---
 #result definition
-std_msgs/Empty result
+uint32 status_code
 ---
 #feedback

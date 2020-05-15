@@ -196,6 +196,7 @@ PlannerServer::computePlan()
   // Initialize the ComputePathToPose goal and result
   auto goal = action_server_->get_current_goal();
   auto result = std::make_shared<nav2_msgs::action::ComputePathToPose::Result>();
+  result->status_code = 0;
 
   try {
     if (action_server_ == nullptr) {
@@ -222,7 +223,8 @@ PlannerServer::computePlan()
 
     if (action_server_->is_preempt_requested()) {
       RCLCPP_INFO(get_logger(), "Preempting the goal pose.");
-      goal = action_server_->accept_pending_goal();
+      result->status_code = 1; // code=1 stands for preemption
+      goal = action_server_->accept_pending_goal(result);
     }
 
     RCLCPP_DEBUG(

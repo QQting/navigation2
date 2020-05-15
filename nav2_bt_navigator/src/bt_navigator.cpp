@@ -218,9 +218,12 @@ BtNavigator::navigateToPose()
   RosTopicLogger topic_logger(client_node_, tree_);
 
   auto on_loop = [&]() {
+      auto result = std::make_shared<nav2_msgs::action::NavigateToPose::Result>();
+      result->status_code = 0;
       if (action_server_->is_preempt_requested()) {
         RCLCPP_INFO(get_logger(), "Received goal preemption request");
-        action_server_->accept_pending_goal();
+        result->status_code = 1; // code=1 stands for preemption
+        action_server_->accept_pending_goal(result);
         initializeGoalPose();
       }
       topic_logger.flush();

@@ -224,6 +224,9 @@ bool ControllerServer::findControllerId(
 
 void ControllerServer::computeControl()
 {
+  auto result = std::make_shared<nav2_msgs::action::FollowPath::Result>();
+  result->status_code = 0;
+
   RCLCPP_INFO(get_logger(), "Received a goal, begin computing control effort.");
 
   try {
@@ -330,7 +333,9 @@ void ControllerServer::updateGlobalPath()
 {
   if (action_server_->is_preempt_requested()) {
     RCLCPP_INFO(get_logger(), "Passing new path to controller.");
-    auto goal = action_server_->accept_pending_goal();
+    auto result = std::make_shared<nav2_msgs::action::FollowPath::Result>();
+    result->status_code = 1; // code=1 stands for preemption
+    auto goal = action_server_->accept_pending_goal(result);
     std::string current_controller;
     if (findControllerId(goal->controller_id, current_controller)) {
       current_controller_ = current_controller;

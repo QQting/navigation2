@@ -166,7 +166,8 @@ public:
 
       if (is_active(pending_handle_)) {
         debug_msg("Executing a pending handle on the existing thread.");
-        accept_pending_goal();
+        auto result = std::make_shared<typename ActionT::Result>();
+        accept_pending_goal(result);
       } else {
         debug_msg("Done processing available goals.");
         break;
@@ -234,7 +235,9 @@ public:
     return preempt_requested_;
   }
 
-  const std::shared_ptr<const typename ActionT::Goal> accept_pending_goal()
+  const std::shared_ptr<const typename ActionT::Goal> accept_pending_goal(
+    typename std::shared_ptr<typename ActionT::Result> result = 
+    std::make_shared<typename ActionT::Result>())
   {
     std::lock_guard<std::recursive_mutex> lock(update_mutex_);
 
@@ -245,7 +248,7 @@ public:
 
     if (is_active(current_handle_) && current_handle_ != pending_handle_) {
       debug_msg("Cancelling the previous goal");
-      current_handle_->abort(empty_result());
+      current_handle_->abort(result);
     }
 
     current_handle_ = pending_handle_;
@@ -349,11 +352,6 @@ protected:
   std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> pending_handle_;
 
   typename rclcpp_action::Server<ActionT>::SharedPtr action_server_;
-
-  constexpr auto empty_result() const
-  {
-    return std::make_shared<typename ActionT::Result>();
-  }
 
   constexpr bool is_active(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> handle) const

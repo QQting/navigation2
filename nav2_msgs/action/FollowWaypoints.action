@@ -3,6 +3,7 @@ geometry_msgs/PoseStamped[] poses
 ---
 #result definition
 int32[] missed_waypoints
+uint32 status_code
 ---
 #feedback
 uint32 current_waypoint

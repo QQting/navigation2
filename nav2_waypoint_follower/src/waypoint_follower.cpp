@@ -114,6 +114,7 @@ WaypointFollower::followWaypoints()
   auto goal = action_server_->get_current_goal();
   auto feedback = std::make_shared<ActionT::Feedback>();
   auto result = std::make_shared<ActionT::Result>();
+  result->status_code = 0;
 
   // Check if request is valid
   if (!action_server_ || !action_server_->is_server_active()) {
@@ -140,7 +141,8 @@ WaypointFollower::followWaypoints()
     // Check if asked to process another action
     if (action_server_->is_preempt_requested()) {
       RCLCPP_INFO(get_logger(), "Preempting the goal pose.");
-      goal = action_server_->accept_pending_goal();
+      result->status_code = 1; // code=1 stands for preemption
+      goal = action_server_->accept_pending_goal(result);
       goal_index = 0;
       new_goal = true;
     }

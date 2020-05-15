@@ -4,5 +4,6 @@ string planner_id
 ---
 #result definition
 nav_msgs/Path path
+uint32 status_code
 ---
 #feedback

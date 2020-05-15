@@ -218,7 +218,8 @@ protected:
     auto send_goal_options = typename rclcpp_action::Client<ActionT>::SendGoalOptions();
     send_goal_options.result_callback =
       [this](const typename rclcpp_action::ClientGoalHandle<ActionT>::WrappedResult & result) {
-        if (result.code != rclcpp_action::ResultCode::ABORTED) {
+        if ((result.code != rclcpp_action::ResultCode::ABORTED) || 
+          (result.code == rclcpp_action::ResultCode::ABORTED && result.result->status_code == 0)) {
           goal_result_available_ = true;
           result_ = result;
         }
