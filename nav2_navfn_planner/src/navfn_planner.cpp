@@ -72,7 +72,7 @@ NavfnPlanner::configure(
 
   // Initialize parameters
   // Declare this plugin's parameters
-  declare_parameter_if_not_declared(node_, name + ".tolerance", rclcpp::ParameterValue(2.0));
+  declare_parameter_if_not_declared(node_, name + ".tolerance", rclcpp::ParameterValue(0.5));
   node_->get_parameter(name + ".tolerance", tolerance_);
   declare_parameter_if_not_declared(node_, name + ".use_astar", rclcpp::ParameterValue(false));
   node_->get_parameter(name + ".use_astar", use_astar_);
@@ -213,26 +213,35 @@ NavfnPlanner::makePlan(
 
   double resolution = costmap_->getResolution();
   geometry_msgs::msg::Pose p, best_pose;
-  p = goal;
 
   bool found_legal = false;
-  double best_sdist = std::numeric_limits<double>::max();
 
-  p.position.y = goal.position.y - tolerance;
+  p = goal;
+  double potential = getPointPotential(p.position);
+  if (potential < POT_HIGH) {
+    // Goal is reachable by itself
+    best_pose = p;
+    found_legal = true;
+  } else {
+    // Goal is not reachable. Trying to find nearest to the goal
+    // reachable point within its tolerance region
+    double best_sdist = std::numeric_limits<double>::max();
 
-  while (p.position.y <= goal.position.y + tolerance) {
-    p.position.x = goal.position.x - tolerance;
-    while (p.position.x <= goal.position.x + tolerance) {
-      double potential = getPointPotential(p.position);
-      double sdist = squared_distance(p, goal);
-      if (potential < POT_HIGH && sdist < best_sdist) {
-        best_sdist = sdist;
-        best_pose = p;
-        found_legal = true;
+    p.position.y = goal.position.y - tolerance;
+    while (p.position.y <= goal.position.y + tolerance) {
+      p.position.x = goal.position.x - tolerance;
+      while (p.position.x <= goal.position.x + tolerance) {
+        potential = getPointPotential(p.position);
+        double sdist = squared_distance(p, goal);
+        if (potential < POT_HIGH && sdist < best_sdist) {
+          best_sdist = sdist;
+          best_pose = p;
+          found_legal = true;
+        }
+        p.position.x += resolution;
       }
-      p.position.x += resolution;
+      p.position.y += resolution;
     }
-    p.position.y += resolution;
   }
 
   if (found_legal) {
@@ -361,18 +370,25 @@ NavfnPlanner::validPointPotential(
   const double resolution = costmap_->getResolution();
 
   geometry_msgs::msg::Point p = world_point;
-  p.y = world_point.y - tolerance;
-
-  while (p.y <= world_point.y + tolerance) {
-    p.x = world_point.x - tolerance;
-    while (p.x <= world_point.x + tolerance) {
-      double potential = getPointPotential(p);
-      if (potential < POT_HIGH) {
-        return true;
+  double potential = getPointPotential(p);
+  if (potential < POT_HIGH) {
+    // world_point is reachable by itself
+    return true;
+  } else {
+    // world_point, is not reachable. Trying to find any
+    // reachable point within its tolerance region
+    p.y = world_point.y - tolerance;
+    while (p.y <= world_point.y + tolerance) {
+      p.x = world_point.x - tolerance;
+      while (p.x <= world_point.x + tolerance) {
+        potential = getPointPotential(p);
+        if (potential < POT_HIGH) {
+          return true;
+        }
+        p.x += resolution;
       }
-      p.x += resolution;
+      p.y += resolution;
     }
-    p.y += resolution;
   }
 
   return false;

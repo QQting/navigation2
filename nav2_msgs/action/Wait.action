@@ -5,3 +5,4 @@ builtin_interfaces/Duration time
 uint32 status_code
 ---
 #feedback
+builtin_interfaces/Duration time_left

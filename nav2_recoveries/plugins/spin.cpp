@@ -35,9 +35,10 @@ namespace nav2_recoveries
 {
 
 Spin::Spin()
-: Recovery<SpinAction>()
+: Recovery<SpinAction>(),
+  feedback_(std::make_shared<SpinAction::Feedback>()),
+  prev_yaw_(0.0)
 {
-  prev_yaw_ = 0.0;
 }
 
 Spin::~Spin()
@@ -70,7 +71,10 @@ void Spin::onConfigure()
 Status Spin::onRun(const std::shared_ptr<const SpinAction::Goal> command)
 {
   geometry_msgs::msg::PoseStamped current_pose;
-  if (!nav2_util::getCurrentPose(current_pose, *tf_, "odom")) {
+  if (!nav2_util::getCurrentPose(
+      current_pose, *tf_, global_frame_, robot_base_frame_,
+      transform_tolerance_))
+  {
     RCLCPP_ERROR(node_->get_logger(), "Current robot pose is not available.");
     return Status::FAILED;
   }
@@ -88,7 +92,10 @@ Status Spin::onRun(const std::shared_ptr<const SpinAction::Goal> command)
 Status Spin::onCycleUpdate()
 {
   geometry_msgs::msg::PoseStamped current_pose;
-  if (!nav2_util::getCurrentPose(current_pose, *tf_, "odom")) {
+  if (!nav2_util::getCurrentPose(
+      current_pose, *tf_, global_frame_, robot_base_frame_,
+      transform_tolerance_))
+  {
     RCLCPP_ERROR(node_->get_logger(), "Current robot pose is not available.");
     return Status::FAILED;
   }
@@ -102,6 +109,9 @@ Status Spin::onCycleUpdate()
 
   relative_yaw_ += delta_yaw;
   prev_yaw_ = current_yaw;
+
+  feedback_->angular_distance_traveled = relative_yaw_;
+  action_server_->publish_feedback(feedback_);
 
   double remaining_yaw = abs(cmd_yaw_) - abs(relative_yaw_);
   if (remaining_yaw <= 0) {

@@ -5,4 +5,4 @@ float32 speed
 #result definition
 uint32 status_code
 ---
-#feedback
+float32 distance_traveled

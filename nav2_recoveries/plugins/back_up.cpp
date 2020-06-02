@@ -26,7 +26,8 @@ namespace nav2_recoveries
 {
 
 BackUp::BackUp()
-: Recovery<BackUpAction>()
+: Recovery<BackUpAction>(),
+  feedback_(std::make_shared<BackUpAction::Feedback>())
 {
 }
 
@@ -53,7 +54,10 @@ Status BackUp::onRun(const std::shared_ptr<const BackUpAction::Goal> command)
   command_x_ = command->target.x;
   command_speed_ = command->speed;
 
-  if (!nav2_util::getCurrentPose(initial_pose_, *tf_, "odom")) {
+  if (!nav2_util::getCurrentPose(
+      initial_pose_, *tf_, global_frame_, robot_base_frame_,
+      transform_tolerance_))
+  {
     RCLCPP_ERROR(node_->get_logger(), "Initial robot pose is not available.");
     return Status::FAILED;
   }
@@ -64,7 +68,10 @@ Status BackUp::onRun(const std::shared_ptr<const BackUpAction::Goal> command)
 Status BackUp::onCycleUpdate()
 {
   geometry_msgs::msg::PoseStamped current_pose;
-  if (!nav2_util::getCurrentPose(current_pose, *tf_, "odom")) {
+  if (!nav2_util::getCurrentPose(
+      current_pose, *tf_, global_frame_, robot_base_frame_,
+      transform_tolerance_))
+  {
     RCLCPP_ERROR(node_->get_logger(), "Current robot pose is not available.");
     return Status::FAILED;
   }
@@ -73,10 +80,14 @@ Status BackUp::onCycleUpdate()
   double diff_y = initial_pose_.pose.position.y - current_pose.pose.position.y;
   double distance = sqrt(diff_x * diff_x + diff_y * diff_y);
 
+  feedback_->distance_traveled = distance;
+  action_server_->publish_feedback(feedback_);
+
   if (distance >= abs(command_x_)) {
     stopRobot();
     return Status::SUCCEEDED;
   }
+
   // TODO(mhpanah): cmd_vel value should be passed as a parameter
   auto cmd_vel = std::make_unique<geometry_msgs::msg::Twist>();
   cmd_vel->linear.y = 0.0;

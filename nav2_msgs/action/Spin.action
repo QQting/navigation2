@@ -4,4 +4,4 @@ float32 target_yaw
 #result definition
 uint32 status_code
 ---
-#feedback
+float32 angular_distance_traveled
